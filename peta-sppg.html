@@ -146,7 +146,7 @@ footer strong{color:rgba(255,255,255,.6);}
     <div class="card"><div class="ch"><span class="ct">Rata-rata Stunting per Provinsi</span><span class="cs">merah &gt;30% · kuning 20–30%</span></div><div class="cb" style="height:480px"><canvas id="cProvStunt"></canvas></div></div>
   </div>
   <div class="card"><div class="ch"><span class="ct">Tabel Semua Provinsi</span><span class="cs" id="provCount">— provinsi</span></div>
-    <div class="tw"><table><thead><tr><th>Provinsi</th><th>Kab/Kota</th><th>Total SPPG</th><th>Populasi</th><th>SPPG/10k</th><th>Avg Kemiskinan</th><th>Avg Stunting</th></tr></thead><tbody id="tblProv"></tbody></table></div>
+    <div class="tw"><table><thead><tr><th>Provinsi</th><th>Kab/Kota</th><th>Total SPPG</th><th>Populasi</th><th>SPPG/10k</th><th>SPPG/100k</th><th>Avg Kemiskinan</th><th>Avg Stunting</th></tr></thead><tbody id="tblProv"></tbody></table></div>
   </div>
 </div>
 <div id="tab-prioritas" style="display:none" class="section">
@@ -156,7 +156,7 @@ footer strong{color:rgba(255,255,255,.6);}
       <div class="tw"><table><thead><tr><th>#</th><th>Kabupaten/Kota</th><th>Provinsi</th><th>Populasi</th><th>Stunting</th><th>Kemiskinan</th></tr></thead><tbody id="tblNol"></tbody></table></div>
     </div>
     <div class="card"><div class="ch"><span class="ct">30 Kab — SPPG/10k Terendah</span><span class="cs">under-served terberat</span></div>
-      <div class="tw"><table><thead><tr><th>Kabupaten/Kota</th><th>Provinsi</th><th>SPPG/10k</th><th>Stunting</th><th>Miskin</th></tr></thead><tbody id="tblLow"></tbody></table></div>
+      <div class="tw"><table><thead><tr><th>Kabupaten/Kota</th><th>Provinsi</th><th>SPPG/10k</th><th>SPPG/100k</th><th>Stunting</th><th>Miskin</th></tr></thead><tbody id="tblLow"></tbody></table></div>
     </div>
   </div>
   <div class="card"><div class="ch"><span class="ct">20 Kab — Stunting Tertinggi vs Rasio SPPG</span><span class="cs">dua sumbu</span></div><div class="cb" style="height:260px"><canvas id="cHighStunt"></canvas></div></div>
@@ -172,7 +172,7 @@ footer strong{color:rgba(255,255,255,.6);}
   </div>
   <div class="card"><div class="ch"><span class="ct">Data Lengkap</span><span class="cs" id="dataCount">—</span></div>
     <div class="tw"><table>
-      <thead><tr><th>No</th><th>Kabupaten/Kota</th><th>Provinsi</th><th>Populasi</th><th>SPPG</th><th>SPPG/10k</th><th>Kemiskinan %</th><th>Stunting %</th><th>Total Sekolah</th></tr></thead>
+      <thead><tr><th>No</th><th>Kabupaten/Kota</th><th>Provinsi</th><th>Populasi</th><th>SPPG</th><th>SPPG/10k</th><th>SPPG/100k</th><th>Kemiskinan %</th><th>Stunting %</th><th>Total Sekolah</th></tr></thead>
       <tbody id="tblData"></tbody>
     </table></div>
   </div>
@@ -705,7 +705,8 @@ const TOTAL_BGN = 27427;
 const DATA = RAW.map((r,i)=>({
   no:i+1, prov:r[0], kab:r[1], pop:r[2], sppg:r[3],
   miskin_n:r[4], miskin:r[5], stunting:r[6], sekolah:r[7],
-  rasio: r[2]>0 ? +(r[3]/r[2]*10000).toFixed(3) : 0
+  rasio:   r[2]>0 ? +(r[3]/r[2]*10000).toFixed(3)  : 0,
+  rasio100k: r[2]>0 ? +(r[3]/r[2]*100000).toFixed(3) : 0
 }));
 let FILTERED=[...DATA];
 Chart.defaults.font.family='IBM Plex Mono, monospace';
@@ -740,7 +741,13 @@ function getProvData(){
     if(!map[r.prov])map[r.prov]={prov:r.prov,n:0,sppg:0,pop:0,ms:0,ss:0};
     map[r.prov].n++;map[r.prov].sppg+=r.sppg;map[r.prov].pop+=r.pop;map[r.prov].ms+=r.miskin;map[r.prov].ss+=r.stunting;
   });
-  return Object.values(map).map(p=>({...p,rasio:p.pop>0?+(p.sppg/p.pop*10000).toFixed(2):0,avgMiskin:+(p.ms/p.n).toFixed(2),avgStunt:+(p.ss/p.n).toFixed(2)}));
+  return Object.values(map).map(p=>({
+    ...p,
+    rasio:    p.pop>0?+(p.sppg/p.pop*10000).toFixed(2):0,
+    rasio100k:p.pop>0?+(p.sppg/p.pop*100000).toFixed(2):0,
+    avgMiskin:+(p.ms/p.n).toFixed(2),
+    avgStunt: +(p.ss/p.n).toFixed(2),
+  }));
 }
 function buildRingkasan(){
   const prov=getProvData().sort((a,b)=>b.sppg-a.sppg);
@@ -761,7 +768,7 @@ function buildProvinsi(){
   g('provBars').innerHTML=sorted.map((p,i)=>`<div class="pr"><div class="pr-top"><span class="pr-name">${p.prov}</span><span class="pr-val">${p.sppg.toLocaleString('id-ID')} SPPG · ${p.n} kab</span></div><div class="pr-bar"><div class="pr-fill" style="width:${Math.round(p.sppg/maxS*100)}%;background:${colors[i%colors.length]}"></div></div></div>`).join('');
   const stSort=[...prov].filter(p=>p.avgStunt>0).sort((a,b)=>b.avgStunt-a.avgStunt).slice(0,20);
   mkChart('cProvStunt',{type:'bar',data:{labels:stSort.map(p=>p.prov.replace('Kalimantan','Kal.').replace('Sumatera','Sum.').replace('Sulawesi','Sul.').replace('Nusa Tenggara','NT')),datasets:[{data:stSort.map(p=>p.avgStunt),backgroundColor:stSort.map(p=>p.avgStunt>30?'rgba(176,58,46,.8)':p.avgStunt>20?'rgba(183,119,13,.75)':'rgba(26,107,67,.65)'),borderRadius:3,borderSkipped:false}]},options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{grid:{color:'#ede8dc'},ticks:{callback:v=>v+'%'}},y:{grid:{display:false},ticks:{font:{size:9}}}}}});
-  g('tblProv').innerHTML=sorted.map(p=>{const fc=p.avgStunt>30?'br':p.avgStunt>20?'ba':'bg';return`<tr><td>${p.prov}</td><td class="mono">${p.n}</td><td class="mono">${p.sppg.toLocaleString('id-ID')}</td><td class="mono dim">${p.pop.toLocaleString('id-ID')}</td><td class="mono">${p.rasio}</td><td class="mono">${p.avgMiskin}%</td><td><span class="b ${fc}">${p.avgStunt}%</span></td></tr>`;}).join('');
+  g('tblProv').innerHTML=sorted.map(p=>{const fc=p.avgStunt>30?'br':p.avgStunt>20?'ba':'bg';return`<tr><td>${p.prov}</td><td class="mono">${p.n}</td><td class="mono">${p.sppg.toLocaleString('id-ID')}</td><td class="mono dim">${p.pop.toLocaleString('id-ID')}</td><td class="mono">${p.rasio}</td><td class="mono">${p.rasio100k}</td><td class="mono">${p.avgMiskin}%</td><td><span class="b ${fc}">${p.avgStunt}%</span></td></tr>`;}).join('');
 }
 let priorBuilt=false;
 function buildPrioritas(){
@@ -770,7 +777,7 @@ function buildPrioritas(){
   g('nolCount').textContent=nol.length+' wilayah';
   g('tblNol').innerHTML=nol.map((r,i)=>`<tr><td class="mono dim">${i+1}</td><td style="font-weight:500">${r.kab}</td><td class="dim">${r.prov}</td><td class="mono dim">${r.pop.toLocaleString('id-ID')}</td><td class="mono" style="color:${r.stunting>40?'var(--red2)':r.stunting>30?'var(--amber)':'inherit'}">${r.stunting}%</td><td class="mono">${r.miskin}%</td></tr>`).join('');
   const low=DATA.filter(r=>r.sppg>0&&r.pop>0).sort((a,b)=>a.rasio-b.rasio).slice(0,30);
-  g('tblLow').innerHTML=low.map(r=>`<tr><td>${r.kab}</td><td class="dim" style="font-size:11px">${r.prov}</td><td class="mono" style="color:var(--amber)">${r.rasio}</td><td class="mono" style="color:${r.stunting>30?'var(--red2)':'inherit'}">${r.stunting}%</td><td class="mono">${r.miskin}%</td></tr>`).join('');
+  g('tblLow').innerHTML=low.map(r=>`<tr><td>${r.kab}</td><td class="dim" style="font-size:11px">${r.prov}</td><td class="mono" style="color:var(--amber)">${r.rasio}</td><td class="mono" style="color:var(--amber)">${r.rasio100k.toFixed(2)}</td><td class="mono" style="color:${r.stunting>30?'var(--red2)':'inherit'}">${r.stunting}%</td><td class="mono">${r.miskin}%</td></tr>`).join('');
   const topSt=[...DATA].filter(r=>r.stunting>0).sort((a,b)=>b.stunting-a.stunting).slice(0,20);
   mkChart('cHighStunt',{type:'bar',data:{labels:topSt.map(r=>r.kab.replace('Kabupaten','Kab.').replace('Kepulauan','Kep.')),datasets:[{label:'Stunting (%)',data:topSt.map(r=>r.stunting),backgroundColor:'rgba(176,58,46,.78)',borderRadius:3,borderSkipped:false},{label:'SPPG/10k',data:topSt.map(r=>r.rasio),backgroundColor:'rgba(27,79,138,.65)',borderRadius:3,borderSkipped:false,yAxisID:'y2'}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:'#7a7268',boxWidth:10}}},scales:{x:{grid:{display:false},ticks:{font:{size:9},maxRotation:40}},y:{grid:{color:'#ede8dc'},title:{display:true,text:'Stunting (%)',color:'#a89f94',font:{size:9}}},y2:{position:'right',grid:{display:false},title:{display:true,text:'SPPG/10k',color:'#a89f94',font:{size:9}}}}}});
 }
@@ -778,8 +785,9 @@ function renderTable(rows){
   g('dataCount').textContent=rows.length+' baris'+(rows.length>200?' (tampil 200 pertama)':'')+' — TOTAL SPPG: '+rows.reduce((s,r)=>s+r.sppg,0).toLocaleString('id-ID');
   g('tblData').innerHTML=rows.slice(0,200).map(r=>{
     const rc=r.rasio===0?'var(--red2)':r.rasio<0.5?'var(--amber)':'inherit';
+    const rc100=r.rasio100k===0?'var(--red2)':r.rasio100k<5?'var(--amber)':'inherit';
     const sc=r.stunting>30?'var(--red2)':r.stunting>20?'var(--amber)':'inherit';
-    return`<tr><td class="mono dim">${r.no}</td><td style="font-weight:500">${r.kab}</td><td class="dim">${r.prov}</td><td class="mono dim">${r.pop.toLocaleString('id-ID')}</td><td class="mono">${r.sppg}</td><td class="mono" style="color:${rc}">${r.rasio.toFixed(2)}</td><td class="mono">${r.miskin}%</td><td class="mono" style="color:${sc}">${r.stunting}%</td><td class="mono dim">${r.sekolah.toLocaleString('id-ID')}</td></tr>`;
+    return`<tr><td class="mono dim">${r.no}</td><td style="font-weight:500">${r.kab}</td><td class="dim">${r.prov}</td><td class="mono dim">${r.pop.toLocaleString('id-ID')}</td><td class="mono">${r.sppg}</td><td class="mono" style="color:${rc}">${r.rasio.toFixed(2)}</td><td class="mono" style="color:${rc100}">${r.rasio100k.toFixed(2)}</td><td class="mono">${r.miskin}%</td><td class="mono" style="color:${sc}">${r.stunting}%</td><td class="mono dim">${r.sekolah.toLocaleString('id-ID')}</td></tr>`;
   }).join('');
 }
 function applyFilter(btn,mode){
@@ -792,8 +800,8 @@ function applyFilter(btn,mode){
 }
 function dlCSV(){
   const rows=FILTERED.length?FILTERED:DATA;
-  const hdr='No,Provinsi,Kabupaten/Kota,Populasi,Jumlah SPPG,SPPG per 10k,Kemiskinan %,Stunting %,Total Sekolah\n';
-  const body=rows.map(r=>`${r.no},"${r.prov}","${r.kab}",${r.pop},${r.sppg},${r.rasio.toFixed(2)},${r.miskin},${r.stunting},${r.sekolah}`).join('\n');
+  const hdr='No,Provinsi,Kabupaten/Kota,Populasi,Jumlah SPPG,SPPG per 10k,SPPG per 100k,Kemiskinan %,Stunting %,Total Sekolah\n';
+  const body=rows.map(r=>`${r.no},"${r.prov}","${r.kab}",${r.pop},${r.sppg},${r.rasio.toFixed(2)},${r.rasio100k.toFixed(2)},${r.miskin},${r.stunting},${r.sekolah}`).join('\n');
   const a=document.createElement('a');
   a.href=URL.createObjectURL(new Blob(['\uFEFF'+hdr+body],{type:'text/csv;charset=utf-8'}));
   a.download='SPPG_514_KabKota_Verified.csv';a.click();
